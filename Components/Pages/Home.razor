@@ -5,8 +5,16 @@
 @using System.Net.Http.Json
 @using alexandria.web.Models
 @inject HttpClient httpClient
+@rendermode InteractiveServer
 
-<MudTable Items="@BooksList" Hover="true" Breakpoint="Breakpoint.Sm">
+<MudTable ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))" Dense="true" Hover="true"
+    @ref="table">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Books</MudText>
+        <MudSpacer />
+        <MudTextField T="string" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
+            AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
     <HeaderContent>
         <MudTh>Title</MudTh>
         <MudTh>Authors</MudTh>
@@ -17,15 +25,45 @@
         <MudTd DataLabel="Authors">@context.Authors</MudTd>
         <MudTd DataLabel="Series">@context.SeriesInfo</MudTd>
     </RowTemplate>
+    <NoRecordsContent>
+        <MudText>No matching records found</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Loading...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[] { 10,20,5 }" />
+    </PagerContent>
 </MudTable>
 
 @code {
-    private IEnumerable<Book> BooksList = new List<Book>();
-
-    protected override async Task OnInitializedAsync()
+    private MudTable<Book>? table;
+    private int totalItems;
+    private string searchString = "";
+    private async Task<TableData<Book>> ServerReload(TableState state)
     {
-        var result = await
-        httpClient.GetFromJsonAsync<List<Book>>("https://books.internal.thirdember.com/api/Books?page=1&limit=10");
-        BooksList = result ?? new List<Book>();
+        var query = $"https://books.internal.thirdember.com/api/books?page={state.Page + 1}&limit={state.PageSize}";
+        if (!string.IsNullOrEmpty(searchString))
+        {
+            query =
+            $"https://books.internal.thirdember.com/api/books?search={searchString}&page={state.Page + 1}&limit={state.PageSize}";
+        }
+        PagedResult<Book>? data = await httpClient.GetFromJsonAsync<PagedResult<Book>>(query);
+        totalItems = data?.TotalCount ?? 0;
+
+        return new TableData<Book>
+            {
+                Items = data?.Data ?? Enumerable.Empty<Book>(),
+                TotalItems = totalItems
+            };
+    }
+
+    private void OnSearch(string text)
+    {
+        searchString = text;
+        if (table != null)
+        {
+            table.ReloadServerData();
+        }
     }
 }
