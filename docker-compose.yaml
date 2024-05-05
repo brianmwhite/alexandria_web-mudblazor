@@ -1,0 +1,15 @@
+version: '3.4'
+services:
+  webblazor:
+    image: alexandria_webmudblazor:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '5480:80' # network_mode: host
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+    networks:
+      - alexandria_web_network
+networks:
+  alexandria_web_network:
