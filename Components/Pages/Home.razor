@@ -14,6 +14,7 @@
         <MudSpacer />
         <MudTextField T="string" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
             AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        <MudButton Variant="Variant.Filled" Color="Color.Surface" OnClick="ClearSearch">Clear</MudButton>
     </ToolBarContent>
     <HeaderContent>
         <MudTh>Title</MudTh>
@@ -23,7 +24,7 @@
     <RowTemplate>
         <MudTd DataLabel="Title">@context.Title</MudTd>
         <MudTd DataLabel="Authors">@context.Authors</MudTd>
-        <MudTd DataLabel="Series">@context.SeriesInfo</MudTd>
+        <MudTd DataLabel="Series" @onclick="@( () => OnSeriesClick(context.SeriesId) )">@context.SeriesInfo</MudTd>
     </RowTemplate>
     <NoRecordsContent>
         <MudText>No matching records found</MudText>
@@ -32,7 +33,7 @@
         <MudText>Loading...</MudText>
     </LoadingContent>
     <PagerContent>
-        <MudTablePager PageSizeOptions="new int[] { 10,20,5 }" />
+        <MudTablePager PageSizeOptions="new int[] { 20,10,5 }" />
     </PagerContent>
 </MudTable>
 
@@ -40,13 +41,24 @@
     private MudTable<Book>? table;
     private int totalItems;
     private string searchString = "";
+    private long? seriesId = 0;
+    private string baseURL = "https://books.internal.thirdember.com/api/books";
+    private void SetPageSize(TableState state, int pageSize)
+    {
+        table?.SetRowsPerPage(pageSize);
+        state.PageSize = pageSize;
+    }
     private async Task<TableData<Book>> ServerReload(TableState state)
     {
-        var query = $"https://books.internal.thirdember.com/api/books?page={state.Page + 1}&limit={state.PageSize}";
-        if (!string.IsNullOrEmpty(searchString))
+        var query = $"{baseURL}?page={state.Page + 1}&limit={state.PageSize}";
+        if (seriesId > 0)
         {
-            query =
-            $"https://books.internal.thirdember.com/api/books?search={searchString}&page={state.Page + 1}&limit={state.PageSize}";
+            @* SetPageSize(state, 20); *@
+            query = $"{baseURL}/series/{seriesId}?page={state.Page + 1}&limit={state.PageSize}";
+        }
+        else if (!string.IsNullOrEmpty(searchString))
+        {
+            query = $"{baseURL}?search={searchString}&page={state.Page + 1}&limit={state.PageSize}";
         }
         PagedResult<Book>? data = await httpClient.GetFromJsonAsync<PagedResult<Book>>(query);
         totalItems = data?.TotalCount ?? 0;
@@ -61,9 +73,21 @@
     private void OnSearch(string text)
     {
         searchString = text;
-        if (table != null)
-        {
-            table.ReloadServerData();
-        }
+        seriesId = 0; // Reset seriesId when a new search is performed
+        table?.ReloadServerData();
+    }
+
+    private void OnSeriesClick(long? id)
+    {
+        seriesId = id; // Set seriesId when a series is clicked
+        searchString = ""; // Reset searchString when a series is clicked
+        table?.ReloadServerData();
+    }
+
+    private void ClearSearch()
+    {
+        searchString = "";
+        seriesId = 0;
+        table?.ReloadServerData();
     }
 }
