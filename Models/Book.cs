@@ -22,9 +22,9 @@ namespace alexandria.web.Models
         public long? SeriesId { get; set; }
         public DateTime? DateAdded { get; set; }
         public DateTime? PublicationDate { get; set; }
-        public string? MobiFullPath { get; set; }
-        public string? Azw3FullPath { get; set; }
-        public string? EpubFullPath { get; set; }
+        public bool HasMobi { get; set; }
+        public bool HasAzw3 { get; set; }
+        public bool HasEpub { get; set; }
 
         public Book()
         {
@@ -36,10 +36,6 @@ namespace alexandria.web.Models
 
             DateAdded = null;
             PublicationDate = null;
-
-            MobiFullPath = null;
-            Azw3FullPath = null;
-            EpubFullPath = null;
         }
     }
 }

@@ -3,8 +3,11 @@
 <PageTitle>Books</PageTitle>
 
 @using System.Net.Http.Json
+@using System.Text.Json
+@using System.Text
 @using alexandria.web.Models
 @inject HttpClient httpClient
+@inject IConfiguration Configuration
 @rendermode InteractiveServer
 
 <MudTable ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))" Dense="true" Hover="true"
@@ -12,19 +15,81 @@
     <ToolBarContent>
         <MudText Typo="Typo.h6">Books</MudText>
         <MudSpacer />
-        <MudTextField T="string" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start"
+        <MudTextField T="string" Value="@searchString" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search"
+            Adornment="Adornment.Start" Clearable="true" OnClearButtonClick="@( () => ClearSearch() )"
             AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-        <MudButton Variant="Variant.Filled" Color="Color.Surface" OnClick="ClearSearch">Clear</MudButton>
     </ToolBarContent>
     <HeaderContent>
         <MudTh>Title</MudTh>
         <MudTh>Authors</MudTh>
         <MudTh>Series</MudTh>
+        <MudTh Style="text-align:center">Publication Date</MudTh>
+        <MudTh Style="text-align:center">azw3</MudTh>
+        <MudTh Style="text-align:center">mobi</MudTh>
+        <MudTh Style="text-align:center">epub</MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="Title">@context.Title</MudTd>
         <MudTd DataLabel="Authors">@context.Authors</MudTd>
-        <MudTd DataLabel="Series" @onclick="@( () => OnSeriesClick(context.SeriesId) )">@context.SeriesInfo</MudTd>
+        <MudTd DataLabel="Series" Class="cursor-pointer" @onclick="@( () => OnSeriesClick(context.SeriesId) )">
+            @context.SeriesInfo</MudTd>
+        <MudTd DataLabel="PublicationDate" Style="text-align:center">@(context.PublicationDate.HasValue ?
+            context.PublicationDate.Value.ToString("MMM yyyy") : "")
+        </MudTd>
+        <MudTd DataLabel="azw3" Style="text-align:center">
+            @if (context.HasAzw3)
+            {
+                var format = "azw3";
+                <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                    Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                    @if (_processing.ContainsKey((context.Id, format)))
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">..</MudText>
+                    }
+                    else
+                    {
+                        <MudText>@format</MudText>
+                    }
+                </MudButton>
+            }
+        </MudTd>
+        <MudTd DataLabel="mobi" Style="text-align:center">
+            @if (context.HasMobi)
+            {
+                var format = "mobi";
+                <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                    Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                    @if (_processing.ContainsKey((context.Id, format)))
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">..</MudText>
+                    }
+                    else
+                    {
+                        <MudText>@format</MudText>
+                    }
+                </MudButton>
+            }
+        </MudTd>
+        <MudTd DataLabel="epub" Style="text-align:center">
+            @if (context.HasEpub)
+            {
+                var format = "epub";
+                <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                    Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                    @if (_processing.ContainsKey((context.Id, format)))
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">..</MudText>
+                    }
+                    else
+                    {
+                        <MudText>@format</MudText>
+                    }
+                </MudButton>
+            }
+        </MudTd>
     </RowTemplate>
     <NoRecordsContent>
         <MudText>No matching records found</MudText>
@@ -33,16 +98,17 @@
         <MudText>Loading...</MudText>
     </LoadingContent>
     <PagerContent>
-        <MudTablePager PageSizeOptions="new int[] { 20,10,5 }" />
+        <MudTablePager PageSizeOptions="new int[] { 20, 10, 5 }" />
     </PagerContent>
 </MudTable>
 
 @code {
     private MudTable<Book>? table;
+    private Dictionary<(long, string), bool> _processing = new Dictionary<(long, string), bool>();
     private int totalItems;
     private string searchString = "";
     private long? seriesId = 0;
-    private string baseURL = "https://books.internal.thirdember.com/api/books";
+    private string baseURL => Configuration?["baseURL"] ?? string.Empty;
     private void SetPageSize(TableState state, int pageSize)
     {
         table?.SetRowsPerPage(pageSize);
@@ -50,6 +116,10 @@
     }
     private async Task<TableData<Book>> ServerReload(TableState state)
     {
+        if (searchString.StartsWith("series="))
+        {
+            seriesId = long.Parse(searchString.Substring(7));
+        }
         var query = $"{baseURL}?page={state.Page + 1}&limit={state.PageSize}";
         if (seriesId > 0)
         {
@@ -80,7 +150,7 @@
     private void OnSeriesClick(long? id)
     {
         seriesId = id; // Set seriesId when a series is clicked
-        searchString = ""; // Reset searchString when a series is clicked
+        searchString = $"series={id}"; // Reset searchString when a series is clicked
         table?.ReloadServerData();
     }
 
@@ -89,5 +159,22 @@
         searchString = "";
         seriesId = 0;
         table?.ReloadServerData();
+    }
+
+    private async Task Transfer(long id, string format)
+    {
+        _processing[(id, format)] = true;
+        var content = new StringContent(JsonSerializer.Serialize(new { id, format }), Encoding.UTF8, "application/json");
+        var response = await httpClient.PostAsync($"{baseURL}/transfer", content);
+        if (response.IsSuccessStatusCode)
+        {
+            // Handle success
+        }
+        else
+        {
+            // Handle failure
+        }
+        await Task.Delay(250);
+        _processing.Remove((id, format));
     }
 }
