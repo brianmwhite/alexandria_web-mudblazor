@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-SERVICENAME="alexandria_web-blazor"
+SERVICENAME="alexandria_webmudblazor"
 
 git fetch
 
