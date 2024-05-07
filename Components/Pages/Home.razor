@@ -1,6 +1,6 @@
 ﻿@page "/"
 
-<PageTitle>Books</PageTitle>
+        <PageTitle>Books</PageTitle>
 
 @using System.Net.Http.Json
 @using System.Text.Json
@@ -15,7 +15,7 @@
         /* remove shadow line */
     }
 </style>
-<div class="container" style="height:calc(100vh - 150px); display:grid; grid-template-rows: minmax(0,1fr);">
+<div class="container" style="height:calc(100vh - 200px); display:grid; grid-template-rows: minmax(0,1fr);">
     <MudTable ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))" Dense="true" Hover="true"
         @ref="table" Height="100%" FixedHeader="true" FixedFooter="true">
         <ToolBarContent>
@@ -46,54 +46,54 @@
                 @if (context.HasAzw3)
                 {
                     var format = "azw3";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
-                        Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                        <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                            Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
                         @if (_processing.ContainsKey((context.Id, format)))
                         {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">..</MudText>
                         }
                         else
                         {
-                            <MudText>@format</MudText>
+                                    <MudText>@format</MudText>
                         }
-                    </MudButton>
+                        </MudButton>
                 }
             </MudTd>
             <MudTd DataLabel="mobi" Style="text-align:center">
                 @if (context.HasMobi)
                 {
                     var format = "mobi";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
-                        Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                        <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                            Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
                         @if (_processing.ContainsKey((context.Id, format)))
                         {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">..</MudText>
                         }
                         else
                         {
-                            <MudText>@format</MudText>
+                                    <MudText>@format</MudText>
                         }
-                    </MudButton>
+                        </MudButton>
                 }
             </MudTd>
             <MudTd DataLabel="epub" Style="text-align:center">
                 @if (context.HasEpub)
                 {
                     var format = "epub";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
-                        Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
+                        <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled"
+                            Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
                         @if (_processing.ContainsKey((context.Id, format)))
                         {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ms-2">..</MudText>
                         }
                         else
                         {
-                            <MudText>@format</MudText>
+                                    <MudText>@format</MudText>
                         }
-                    </MudButton>
+                        </MudButton>
                 }
             </MudTd>
         </RowTemplate>
