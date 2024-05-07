@@ -8,7 +8,7 @@ RUN dotnet restore
 
 # Copy everything else and build the app
 COPY . .
-RUN dotnet publish -c Release -o /app --no-restore
+RUN dotnet publish ./web-mudblazor.csproj -c Release -o /app --no-restore
 
 # Use the ASP.NET Core 3.1 runtime Docker image to run the app
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
