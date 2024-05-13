@@ -120,15 +120,15 @@
         {
             seriesId = long.Parse(searchString.Substring(7));
         }
-        var query = $"{baseURL}?page={state.Page + 1}&limit={state.PageSize}";
+        var query = $"{baseURL}/books?page={state.Page + 1}&limit={state.PageSize}";
         if (seriesId > 0)
         {
             @* SetPageSize(state, 20); *@
-            query = $"{baseURL}/series/{seriesId}?page={state.Page + 1}&limit={state.PageSize}";
+            query = $"{baseURL}/books/series/{seriesId}?page={state.Page + 1}&limit={state.PageSize}";
         }
         else if (!string.IsNullOrEmpty(searchString))
         {
-            query = $"{baseURL}?search={searchString}&page={state.Page + 1}&limit={state.PageSize}";
+            query = $"{baseURL}/books?search={searchString}&page={state.Page + 1}&limit={state.PageSize}";
         }
         PagedResult<Book>? data = await httpClient.GetFromJsonAsync<PagedResult<Book>>(query);
         totalItems = data?.TotalCount ?? 0;

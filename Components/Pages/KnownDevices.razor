@@ -1,0 +1,97 @@
+@page "/knowndevices"
+@rendermode InteractiveServer
+
+@using alexandria.web.Models
+@inject HttpClient httpClient
+@inject MudBlazor.ISnackbar snackBar
+@inject IConfiguration Configuration
+@using System.Net.Http.Json
+
+
+<MudDataGrid T="KnownDevice" ReadOnly="false" ServerData="@(new Func<GridState<KnownDevice>, Task<GridData<KnownDevice>>>(ServerReload))" EditMode="DataGridEditMode.Form" StartedEditingItem="@StartedEditingItem" CanceledEditingItem="@CanceledEditingItem" CommittedItemChanges="@CommittedItemChanges" Bordered="true" Dense="true" EditTrigger="DataGridEditTrigger.Manual">
+    <Columns>
+        <PropertyColumn Property="x => x.Id" Title="Id" IsEditable="false" />
+        <PropertyColumn Property="x => x.DeviceName" />
+        <PropertyColumn Property="x => x.EbookDirectory" />
+        <PropertyColumn Property="x => x.SavePathTemplate" />
+        <PropertyColumn Property="x => x.Vendor" />
+        <PropertyColumn Property="x => x.SerialNumber" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" />
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private IEnumerable<KnownDevice> Devices = new List<KnownDevice>();
+    private List<string> _events = new();
+    private string baseURL => Configuration?["baseURL"] ?? string.Empty;
+    private string searchString = "";
+
+    private async Task<GridData<KnownDevice>> ServerReload(GridState<KnownDevice> state)
+    {
+        var url = $"{baseURL}/knowndevices";
+        var data = await httpClient.GetFromJsonAsync<List<KnownDevice>>(url);
+
+        return new GridData<KnownDevice>
+            {
+                Items = data,
+                TotalItems = data.Count
+            };
+    }
+
+    void StartedEditingItem(KnownDevice item)
+    {
+        _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    void CanceledEditingItem(KnownDevice item)
+    {
+        _events.Insert(0, $"Event = CanceledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+    }
+
+    void CommittedItemChanges(KnownDevice item)
+    {
+        _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+        Save(item);
+    }
+
+    @* private async Task<TableData<KnownDevices>> GetKnownDevices()
+{
+var url = $"{baseURL}/knowndevices";
+var data = httpClient.GetFromJsonAsync<IEnumerable<KnownDevices>>(url);
+return new TableData<KnownDevices> { Items = data, TotalItems = data.Data.Count() };
+} *@
+    private bool Search(KnownDevice device)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (device.DeviceName.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+        || device.Vendor.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return false;
+    }
+    private async void Save(KnownDevice device)
+    {
+        var url = $"{baseURL}/knowndevices";
+        if (!device.Id.HasValue || device.Id == 0)
+        {
+            await httpClient.PostAsJsonAsync<KnownDevice>(url, device);
+        }
+        else
+        {
+            await httpClient.PutAsJsonAsync<KnownDevice>($"{url}/{device.Id}", device);
+        }
+        device = new KnownDevice();
+        snackBar.Add("Device Saved.", Severity.Success);
+    }
+    private async void Delete(long? id)
+    {
+        var url = $"{baseURL}/knowndevices/{id}";
+        await httpClient.DeleteAsync(url);
+        snackBar.Add("Device Deleted.", Severity.Success);
+    }
+}
