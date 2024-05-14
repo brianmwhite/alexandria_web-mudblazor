@@ -6,92 +6,88 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject IConfiguration Configuration
 @using System.Net.Http.Json
+@inject NavigationManager NavigationManager
 
-
-<MudDataGrid T="KnownDevice" ReadOnly="false" ServerData="@(new Func<GridState<KnownDevice>, Task<GridData<KnownDevice>>>(ServerReload))" EditMode="DataGridEditMode.Form" StartedEditingItem="@StartedEditingItem" CanceledEditingItem="@CanceledEditingItem" CommittedItemChanges="@CommittedItemChanges" Bordered="true" Dense="true" EditTrigger="DataGridEditTrigger.Manual">
-    <Columns>
-        <PropertyColumn Property="x => x.Id" Title="Id" IsEditable="false" />
-        <PropertyColumn Property="x => x.DeviceName" />
-        <PropertyColumn Property="x => x.EbookDirectory" />
-        <PropertyColumn Property="x => x.SavePathTemplate" />
-        <PropertyColumn Property="x => x.Vendor" />
-        <PropertyColumn Property="x => x.SerialNumber" />
-        <TemplateColumn CellClass="d-flex justify-end">
-            <CellTemplate>
-                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync" />
-            </CellTemplate>
-        </TemplateColumn>
-    </Columns>
-</MudDataGrid>
+<div class="container" style="height:calc(100vh - 200px); display:grid; grid-template-rows: minmax(0,1fr);">
+    <MudTable
+        ServerData="@(new Func<TableState, Task<TableData<KnownDevice>>>(ServerReload))"
+        Dense="true"
+        Hover="true" @ref="table"
+        Height="100%"
+        FixedHeader="true"
+        FixedFooter="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Known Devices</MudText>
+            <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.AddCircle" Title="Add" OnClick="@( () => NavigationManager.NavigateTo("/knowndevices/0") )">Add</MudIconButton>
+            <MudSpacer />
+            <MudTextField T="string" Value="@searchString" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start" Clearable="true" OnClearButtonClick="@( () => ClearSearch() )" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Device Name</MudTh>
+            <MudTh>Ebook Dir</MudTh>
+            <MudTh>Save Path Template</MudTh>
+            <MudTh>Vendor</MudTh>
+            <MudTh>Serial Number</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="DeviceName">@context.DeviceName</MudTd>
+            <MudTd DataLabel="EbookDir">@context.EbookDirectory</MudTd>
+            <MudTd DataLabel="SavePathTemplate">@context.SavePathTemplate</MudTd>
+            <MudTd DataLabel="Vendor">@context.Vendor</MudTd>
+            <MudTd DataLabel="SerialNumber">@context.SerialNumber</MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@( () => EditAction(context.Id) )">Edit</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No matching records found</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudText>Loading...</MudText>
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 20, 10, 5 }" />
+        </PagerContent>
+    </MudTable>
+</div>
 
 @code {
-    private IEnumerable<KnownDevice> Devices = new List<KnownDevice>();
-    private List<string> _events = new();
+    private MudTable<KnownDevice>? table;
+    private int totalItems;
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
     private string searchString = "";
-
-    private async Task<GridData<KnownDevice>> ServerReload(GridState<KnownDevice> state)
+    private void SetPageSize(TableState state, int pageSize)
+    {
+        table?.SetRowsPerPage(pageSize);
+        state.PageSize = pageSize;
+    }
+    private async Task<TableData<KnownDevice>> ServerReload(TableState state)
     {
         var url = $"{baseURL}/knowndevices";
         var data = await httpClient.GetFromJsonAsync<List<KnownDevice>>(url);
 
-        return new GridData<KnownDevice>
+        return new TableData<KnownDevice>
             {
                 Items = data,
                 TotalItems = data.Count
             };
     }
-
-    void StartedEditingItem(KnownDevice item)
+    private void OnSearch(string text)
     {
-        _events.Insert(0, $"Event = StartedEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+        searchString = text;
+        table?.ReloadServerData();
     }
-
-    void CanceledEditingItem(KnownDevice item)
+    private void ClearSearch()
     {
-        _events.Insert(0, $"Event = CanceledEditingItem, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
+        searchString = "";
+        table?.ReloadServerData();
     }
-
-    void CommittedItemChanges(KnownDevice item)
+    private void EditAction(long? id)
     {
-        _events.Insert(0, $"Event = CommittedItemChanges, Data = {System.Text.Json.JsonSerializer.Serialize(item)}");
-        Save(item);
-    }
-
-    @* private async Task<TableData<KnownDevices>> GetKnownDevices()
-{
-var url = $"{baseURL}/knowndevices";
-var data = httpClient.GetFromJsonAsync<IEnumerable<KnownDevices>>(url);
-return new TableData<KnownDevices> { Items = data, TotalItems = data.Data.Count() };
-} *@
-    private bool Search(KnownDevice device)
-    {
-        if (string.IsNullOrWhiteSpace(searchString)) return true;
-        if (device.DeviceName.Contains(searchString, StringComparison.OrdinalIgnoreCase)
-        || device.Vendor.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        if (id.HasValue)
         {
-            return true;
+            NavigationManager.NavigateTo($"/knowndevices/{id.Value}");
         }
-        return false;
-    }
-    private async void Save(KnownDevice device)
-    {
-        var url = $"{baseURL}/knowndevices";
-        if (!device.Id.HasValue || device.Id == 0)
-        {
-            await httpClient.PostAsJsonAsync<KnownDevice>(url, device);
-        }
-        else
-        {
-            await httpClient.PutAsJsonAsync<KnownDevice>($"{url}/{device.Id}", device);
-        }
-        device = new KnownDevice();
-        snackBar.Add("Device Saved.", Severity.Success);
-    }
-    private async void Delete(long? id)
-    {
-        var url = $"{baseURL}/knowndevices/{id}";
-        await httpClient.DeleteAsync(url);
-        snackBar.Add("Device Deleted.", Severity.Success);
     }
 }

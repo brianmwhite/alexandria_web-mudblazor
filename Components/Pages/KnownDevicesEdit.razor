@@ -1,0 +1,105 @@
+@page "/knowndevices/{Id:long}"
+@rendermode InteractiveServer
+
+@using alexandria.web.Models
+@inject HttpClient httpClient
+@inject MudBlazor.ISnackbar snackBar
+@inject IConfiguration Configuration
+@using System.Net.Http.Json
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<MudPaper Class="pa-4">
+    <EditForm Model="@device" OnValidSubmit="OnValidSubmit">
+        <DataAnnotationsValidator />
+
+        <MudCard>
+            <MudCardContent>
+                <MudTextField Label="Device Name" @bind-Value="device.DeviceName" For="@(() => device.DeviceName)" />
+                <MudTextField Label="Ebook Directory" @bind-Value="device.EbookDirectory" For="@(() => device.EbookDirectory)" />
+                <MudTextField Label="Save Path Template" @bind-Value="device.SavePathTemplate" For="@(() => device.SavePathTemplate)" />
+                <MudTextField Label="Vendor" @bind-Value="device.Vendor" For="@(() => device.Vendor)" />
+                <MudTextField Label="Serial Number" @bind-Value="device.SerialNumber" For="@(() => device.SerialNumber)" />
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton StartIcon="@Icons.Material.Filled.Save" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">Save</MudButton>
+                <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel" ButtonType="ButtonType.Button" Variant="Variant.Filled" Color="Color.Dark" Class="mx-2">Cancel</MudButton>
+                <MudButton OnClick="(() => Delete(device.Id))" StartIcon="@Icons.Material.Filled.Delete" Variant="Variant.Filled" Color="Color.Error">Delete</MudButton>
+                <MudSpacer />
+            </MudCardActions>
+        </MudCard>
+    </EditForm>
+</MudPaper>
+
+
+@code {
+    [Parameter]
+    public long Id { get; set; }
+    MudForm form;
+    KnownDevice device = new KnownDevice();
+    private string baseURL => Configuration?["baseURL"] ?? string.Empty;
+
+    bool success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id > 0)
+        {
+            device = await httpClient.GetFromJsonAsync<KnownDevice>($"{baseURL}/knowndevices/{Id}");
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/knowndevices");
+    }
+
+    async Task Delete(long id)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", "Are you sure you want to delete this device?");
+        parameters.Add("ButtonText", "Delete");
+        parameters.Add("Color", Color.Error);
+
+        var dialog = DialogService.Show<Dialog>("Please confirm", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Code to execute when the Delete button is clicked
+            var response = await httpClient.DeleteAsync($"{baseURL}/knowndevices/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                snackBar.Add("Device deleted.", Severity.Success);
+                NavigationManager.NavigateTo("/knowndevices");
+            }
+            else
+            {
+                snackBar.Add("Failed to delete device.", Severity.Error);
+            }
+        }
+    }
+
+    private void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        Save(device);
+        StateHasChanged();
+    }
+
+    private async void Save(KnownDevice device)
+    {
+        var url = $"{baseURL}/knowndevices";
+        if (device.Id == 0)
+        {
+            await httpClient.PostAsJsonAsync<KnownDevice>($"{url}", device);
+        }
+        else
+        {
+            await httpClient.PutAsJsonAsync<KnownDevice>($"{url}/{device.Id}", device);
+        }
+        device = new KnownDevice();
+        snackBar.Add("Device Saved.", Severity.Success);
+    }
+
+}
