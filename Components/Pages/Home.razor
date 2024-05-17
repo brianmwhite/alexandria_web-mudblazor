@@ -16,7 +16,14 @@
     }
 </style>
 <div class="container" style="height:calc(100vh - 200px); display:grid; grid-template-rows: minmax(0,1fr);">
-    <MudTable ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))" Dense="true" Hover="true" @ref="table" Height="100%" FixedHeader="true" FixedFooter="true">
+    <MudTable
+        ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))"
+        Dense="true"
+        Hover="true"
+        @ref="table"
+        Height="100%"
+        FixedHeader="true"
+        FixedFooter="true">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Books</MudText>
             <MudSpacer />

@@ -45,7 +45,11 @@
     {
         if (Id > 0)
         {
-            device = await httpClient.GetFromJsonAsync<KnownDevice>($"{baseURL}/knowndevices/{Id}");
+            PagedResult<KnownDevice>? data = await httpClient.GetFromJsonAsync<PagedResult<KnownDevice>>($"{baseURL}/knowndevices/{Id}");
+            if (data != null && data.Data != null && data.TotalCount > 0)
+            {
+                device = data.Data.First<KnownDevice>();
+            }
         }
     }
 
@@ -99,6 +103,7 @@
             await httpClient.PutAsJsonAsync<KnownDevice>($"{url}/{device.Id}", device);
         }
         device = new KnownDevice();
+        NavigationManager.NavigateTo("/knowndevices");
         snackBar.Add("Device Saved.", Severity.Success);
     }
 
