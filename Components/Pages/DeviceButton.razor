@@ -2,7 +2,8 @@
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using alexandria.api.Models
-@using alexandria.web.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
 @inject IConfiguration Configuration
 @inject HttpClient httpClient
 @rendermode InteractiveServer
@@ -40,6 +41,50 @@
         else
         {
             return Color.Dark;
+        }
+    }
+
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+        .WithUrl($"{Configuration["baseURL"]}/hubs/devices")
+        //.ConfigureLogging(logging =>
+        //{
+        // logging.AddFilter("Microsoft.AspNetCore.SignalR", LogLevel.Debug);
+        // logging.AddConsole();
+        //})
+        .AddJsonProtocol(options =>
+        {
+            options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        })
+        .Build();
+
+        hubConnection.On<DetectedDevice>("USBDeviceEvent", (detectedDevice) =>
+        {
+            deviceState = detectedDevice.State;
+            InvokeAsync(StateHasChanged);
+        });
+
+        try
+        {
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
         }
     }
 }
