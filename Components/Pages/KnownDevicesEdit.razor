@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 
 @using alexandria.web.Models
+@using alexandria.api.Models
 @inject HttpClient httpClient
 @inject MudBlazor.ISnackbar snackBar
 @inject IConfiguration Configuration
@@ -36,7 +37,7 @@
     [Parameter]
     public long Id { get; set; }
     MudForm form;
-    KnownDevice device = new KnownDevice();
+    KnownDeviceModel device = new KnownDeviceModel();
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
 
     bool success;
@@ -45,10 +46,10 @@
     {
         if (Id > 0)
         {
-            PagedResult<KnownDevice>? data = await httpClient.GetFromJsonAsync<PagedResult<KnownDevice>>($"{baseURL}/knowndevices/{Id}");
+            PagedResult<KnownDeviceModel>? data = await httpClient.GetFromJsonAsync<PagedResult<KnownDeviceModel>>($"{baseURL}/knowndevices/{Id}");
             if (data != null && data.Data != null && data.TotalCount > 0)
             {
-                device = data.Data.First<KnownDevice>();
+                device = data.Data.First<KnownDeviceModel>();
             }
         }
     }
@@ -58,8 +59,10 @@
         NavigationManager.NavigateTo("/knowndevices");
     }
 
-    async Task Delete(long id)
+    async Task Delete(long? id)
     {
+        if (id == null) { return; }
+
         var parameters = new DialogParameters();
         parameters.Add("ContentText", "Are you sure you want to delete this device?");
         parameters.Add("ButtonText", "Delete");
@@ -91,18 +94,18 @@
         StateHasChanged();
     }
 
-    private async void Save(KnownDevice device)
+    private async void Save(KnownDeviceModel device)
     {
         var url = $"{baseURL}/knowndevices";
         if (device.Id == 0)
         {
-            await httpClient.PostAsJsonAsync<KnownDevice>($"{url}", device);
+            await httpClient.PostAsJsonAsync<KnownDeviceModel>($"{url}", device);
         }
         else
         {
-            await httpClient.PutAsJsonAsync<KnownDevice>($"{url}/{device.Id}", device);
+            await httpClient.PutAsJsonAsync<KnownDeviceModel>($"{url}/{device.Id}", device);
         }
-        device = new KnownDevice();
+        device = new KnownDeviceModel();
         NavigationManager.NavigateTo("/knowndevices");
         snackBar.Add("Device Saved.", Severity.Success);
     }
