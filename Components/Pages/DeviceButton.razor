@@ -76,6 +76,8 @@
         {
             Console.WriteLine($"Error: {ex.Message}");
         }
+
+        await GetDeviceStatus();
     }
 
     public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
