@@ -1,4 +1,6 @@
-﻿<!DOCTYPE html>
+﻿@using alexandria.web.Components.Pages
+
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -18,6 +20,7 @@
     <MudAppBar Color="Color.Primary" Fixed="false">
         <MudIconButton Href="/" Icon="@Icons.Material.Filled.MenuBook" Color="Color.Inherit" Edge="Edge.Start" />
         <MudSpacer />
+        <DeviceButton />
         <MudIconButton Href="/knowndevices" Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit" />
     </MudAppBar>
     <Routes />

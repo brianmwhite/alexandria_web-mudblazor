@@ -1,0 +1,45 @@
+@namespace alexandria.web.Components.Pages
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using alexandria.api.Models
+@using alexandria.web.Services
+@inject IConfiguration Configuration
+@inject HttpClient httpClient
+@rendermode InteractiveServer
+
+<MudIconButton Icon="@Icons.Material.Filled.Book" Color="@GetColor()" OnClick="(() => GetDeviceStatus())" />
+
+@code {
+    private string baseURL => Configuration?["baseURL"] ?? string.Empty;
+
+    private DetectedDevice.StateEnum deviceState = DetectedDevice.StateEnum.NOT_DETECTED;
+
+    private async Task GetDeviceStatus()
+    {
+        var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
+
+        var detectedDevice = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
+        deviceState = detectedDevice != null ? detectedDevice.State : DetectedDevice.StateEnum.NOT_DETECTED;
+        StateHasChanged();
+    }
+
+    private Color GetColor()
+    {
+        if (deviceState == DetectedDevice.StateEnum.MATCHED)
+        {
+            return Color.Success;
+        }
+        else if (deviceState == DetectedDevice.StateEnum.NOT_MATCHED)
+        {
+            return Color.Warning;
+        }
+        else
+        {
+            return Color.Dark;
+        }
+    }
+}
