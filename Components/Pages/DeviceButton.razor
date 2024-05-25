@@ -8,12 +8,13 @@
 @inject HttpClient httpClient
 @rendermode InteractiveServer
 
-<MudIconButton Icon="@Icons.Material.Filled.Book" Color="@GetColor()" OnClick="(() => GetDeviceStatus())" />
+<MudIconButton Icon=@GetDeviceStatusIcon() Color="@GetDeviceStatusColor()" OnClick="(() => Eject())" />
+<MudIconButton Icon="@Icons.Material.Filled.Smartphone" Color="@GetMatchStatusColor()" OnClick="(() => GetDeviceStatus())" />
 
 @code {
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
 
-    private DetectedDevice.StateEnum deviceState = DetectedDevice.StateEnum.NOT_DETECTED;
+    private DetectedDevice _detectedDevice = new DetectedDevice();
 
     private async Task GetDeviceStatus()
     {
@@ -23,24 +24,86 @@
                 Converters = { new JsonStringEnumConverter() }
             };
 
-        var detectedDevice = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
-        deviceState = detectedDevice != null ? detectedDevice.State : DetectedDevice.StateEnum.NOT_DETECTED;
+        var response = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
+        if (response != null)
+        {
+            _detectedDevice = response;
+        }
         StateHasChanged();
     }
 
-    private Color GetColor()
+    private async Task Eject()
     {
-        if (deviceState == DetectedDevice.StateEnum.MATCHED)
+        if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
+        {
+            await httpClient.PostAsync($"{Configuration["baseURL"]}/usb/unmount", null);
+            await GetDeviceStatus();
+        }
+    }
+
+    @* private string GetClass()
+{
+if (deviceState == DetectedDevice.DeviceStateEnum.NO_DEVICE_DETECTED)
+{
+return "d-none";
+}
+else
+{
+return "";
+}
+} *@
+    private Color GetDeviceStatusColor()
+    {
+        if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
+        {
+            //show eject icon
+            return Color.Inherit;
+        }
+        else if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.NOT_MOUNTED)
+        {
+            //show mount icon
+            return Color.Inherit;
+        }
+        else
+        {
+            //show nothing detected icon
+            return Color.Dark;
+        }
+    }
+
+    private string GetDeviceStatusIcon()
+    {
+        if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
+        {
+            //show eject icon
+            return Icons.Material.Filled.Eject;
+        }
+        else if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.NOT_MOUNTED)
+        {
+            //show mount icon
+            //return Icons.Material.Filled.ReplayCircleFilled;
+            return Icons.Material.Filled.DoNotDisturb;
+        }
+        else
+        {
+            //show nothing detected icon
+            return Icons.Material.Filled.DoNotDisturb;
+        }
+    }
+
+    private Color GetMatchStatusColor()
+    {
+        if (_detectedDevice.MatchedState == DetectedDevice.MatchedStateEnum.MATCHED_KNOWN && _detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
         {
             return Color.Success;
         }
-        else if (deviceState == DetectedDevice.StateEnum.NOT_MATCHED)
+        else if (_detectedDevice.MatchedState == DetectedDevice.MatchedStateEnum.MATCHED_TYPE && _detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
         {
             return Color.Warning;
         }
         else
         {
-            return Color.Dark;
+            return Color.Inherit;
         }
     }
 
@@ -48,6 +111,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _detectedDevice.DeviceState = DetectedDevice.DeviceStateEnum.NO_DEVICE_DETECTED;
+        _detectedDevice.MatchedState = DetectedDevice.MatchedStateEnum.NOT_MATCHED;
+
         hubConnection = new HubConnectionBuilder()
         .WithUrl($"{Configuration["baseURL"]}/hubs/devices")
         //.ConfigureLogging(logging =>
@@ -64,7 +130,7 @@
 
         hubConnection.On<DetectedDevice>("USBDeviceEvent", (detectedDevice) =>
         {
-            deviceState = detectedDevice.State;
+            _detectedDevice = detectedDevice;
             InvokeAsync(StateHasChanged);
         });
 
