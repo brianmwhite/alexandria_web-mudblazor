@@ -12,6 +12,8 @@
 @using System.Net.Http.Json
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
+@using alexandria.web.Components.Pages
+<TopAppBar />
 
 <MudPaper Class="pa-4">
     <EditForm Model="@device" OnValidSubmit="OnValidSubmit">

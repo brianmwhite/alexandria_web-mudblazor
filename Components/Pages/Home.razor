@@ -9,12 +9,15 @@
 @inject HttpClient httpClient
 @inject IConfiguration Configuration
 @rendermode InteractiveServer
+
 <style>
     div.container {
         --mud-elevation-1: none !important;
         /* remove shadow line */
     }
 </style>
+@using alexandria.web.Components.Pages
+<TopAppBar />
 <div class="container" style="height:calc(100vh - 200px); display:grid; grid-template-rows: minmax(0,1fr);">
     <MudTable
         ServerData="@(new Func<TableState, Task<TableData<Book>>>(ServerReload))"
