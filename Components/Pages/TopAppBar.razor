@@ -6,9 +6,10 @@
 @implements IAsyncDisposable
 @inject IConfiguration Configuration
 @inject HttpClient httpClient
-@rendermode InteractiveServer
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage ProtectedSessionStore
 
 <MudAppBar Color="Color.Primary" Fixed="false">
     <MudIconButton Href="/" Icon="@Icons.Material.Filled.MenuBook" Color="Color.Inherit" Edge="Edge.Start" />
@@ -36,6 +37,7 @@
         {
             _detectedDevice = response;
         }
+        await ProtectedSessionStore.SetAsync("DetectedDevice", _detectedDevice);
         StateHasChanged();
         CheckForUnMatchedButDetectedDevice();
     }
@@ -163,6 +165,7 @@ return "";
         hubConnection.On<DetectedDevice>("USBDeviceEvent", (detectedDevice) =>
         {
             _detectedDevice = detectedDevice;
+            ProtectedSessionStore.SetAsync("DetectedDevice", detectedDevice);
             InvokeAsync(StateHasChanged);
             CheckForUnMatchedButDetectedDevice();
         });

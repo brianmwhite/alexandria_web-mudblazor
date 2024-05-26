@@ -10,7 +10,6 @@
 @using System.Net.Http.Json
 @inject NavigationManager NavigationManager
 @using alexandria.web.Components.Pages
-<TopAppBar />
 
 <div class="container" style="height:calc(100vh - 200px); display:grid; grid-template-rows: minmax(0,1fr);">
     <MudTable
@@ -62,7 +61,7 @@
     private int totalItems;
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
     private string searchString = "";
-    
+
     private DetectedDevice _detectedDevice = new DetectedDevice();
 
     private async Task GetDeviceStatus()
@@ -80,7 +79,7 @@
         }
         StateHasChanged();
     }
-    
+
     private void SetPageSize(TableState state, int pageSize)
     {
         table?.SetRowsPerPage(pageSize);

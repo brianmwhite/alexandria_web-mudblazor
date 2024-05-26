@@ -12,8 +12,10 @@
 @using System.Net.Http.Json
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedSessionStorage ProtectedSessionStore
 @using alexandria.web.Components.Pages
-<TopAppBar />
+
 
 <MudPaper Class="pa-4">
     <EditForm Model="@device" OnValidSubmit="OnValidSubmit">
@@ -72,7 +74,15 @@
                         Converters = { new JsonStringEnumConverter() }
                     };
 
-                var detectedDevice = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
+                //get from session storage
+                var result = await ProtectedSessionStore.GetAsync<DetectedDevice>("DetectedDevice");
+                DetectedDevice? detectedDevice = result.Success ? result.Value : null;
+
+                if (detectedDevice == null)
+                {
+                    detectedDevice = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
+                }
+
                 if (detectedDevice != null)
                 {
                     device.DeviceName = detectedDevice?.DeviceType?.DeviceName;
@@ -109,6 +119,7 @@
             if (response.IsSuccessStatusCode)
             {
                 snackBar.Add("Device deleted.", Severity.Success);
+                await httpClient.PostAsync($"{baseURL}/usb/notify", null);
                 NavigationManager.NavigateTo("/knowndevices");
             }
             else
@@ -136,6 +147,7 @@
             await httpClient.PutAsJsonAsync<KnownDeviceModel>($"{url}/{device.Id}", device);
         }
         device = new KnownDeviceModel();
+        await httpClient.PostAsync($"{baseURL}/usb/notify", null);
         NavigationManager.NavigateTo("/knowndevices");
         snackBar.Add("Device Saved.", Severity.Success);
     }
