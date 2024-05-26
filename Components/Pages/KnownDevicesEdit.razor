@@ -1,6 +1,9 @@
 @page "/knowndevices/{Id:long}"
 @rendermode InteractiveServer
 
+@using System.Text.Json
+@using System.Web
+@using System.Text.Json.Serialization
 @using alexandria.web.Models
 @using alexandria.api.Models
 @inject HttpClient httpClient
@@ -36,6 +39,9 @@
 @code {
     [Parameter]
     public long Id { get; set; }
+
+    public bool NewDevice { get; set; }
+
     MudForm form;
     KnownDeviceModel device = new KnownDeviceModel();
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
@@ -50,6 +56,32 @@
             if (data != null && data.Data != null && data.TotalCount > 0)
             {
                 device = data.Data.First<KnownDeviceModel>();
+            }
+        }
+        else
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            NewDevice = bool.TryParse(query.Get("newdevice"), out var newDevice) && newDevice;
+
+            if (NewDevice)
+            {
+                device = new KnownDeviceModel();
+                var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        Converters = { new JsonStringEnumConverter() }
+                    };
+
+                var detectedDevice = await httpClient.GetFromJsonAsync<DetectedDevice>($"{Configuration["baseURL"]}/knowndevices/detect", options);
+                if (detectedDevice != null)
+                {
+                    device.DeviceName = detectedDevice?.DeviceType?.DeviceName;
+                    device.EbookDirectory = detectedDevice?.DeviceType?.EbookDirectory;
+                    device.SavePathTemplate = detectedDevice?.DeviceType?.SavePathTemplate;
+                    device.Vendor = detectedDevice?.DeviceType?.Vendor;
+                    device.SerialNumber = detectedDevice?.USBDeviceInfo?.Serial;
+                }
             }
         }
     }
@@ -97,7 +129,7 @@
     private async void Save(KnownDeviceModel device)
     {
         var url = $"{baseURL}/knowndevices";
-        if (device.Id == 0)
+        if (device.Id is null || device.Id == 0)
         {
             await httpClient.PostAsJsonAsync<KnownDeviceModel>($"{url}", device);
         }
@@ -109,5 +141,4 @@
         NavigationManager.NavigateTo("/knowndevices");
         snackBar.Add("Device Saved.", Severity.Success);
     }
-
 }

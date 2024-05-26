@@ -7,9 +7,16 @@
 @inject IConfiguration Configuration
 @inject HttpClient httpClient
 @rendermode InteractiveServer
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 
-<MudIconButton Icon=@GetDeviceStatusIcon() Color="@GetDeviceStatusColor()" OnClick="(() => Eject())" />
-<MudIconButton Icon="@Icons.Material.Filled.Smartphone" Color="@GetMatchStatusColor()" OnClick="(() => GetDeviceStatus())" />
+<MudAppBar Color="Color.Primary" Fixed="false">
+    <MudIconButton Href="/" Icon="@Icons.Material.Filled.MenuBook" Color="Color.Inherit" Edge="Edge.Start" />
+    <MudSpacer />
+    <MudIconButton Icon=@GetDeviceStatusIcon() Color="@GetDeviceStatusColor()" OnClick="(() => Eject())" />
+    <MudIconButton Icon="@Icons.Material.Filled.Smartphone" Color="@GetMatchStatusColor()" OnClick="(() => GetDeviceStatus())" />
+    <MudIconButton Href="/knowndevices" Icon="@Icons.Material.Filled.Settings" Color="Color.Inherit" />
+</MudAppBar>
 
 @code {
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
@@ -30,6 +37,7 @@
             _detectedDevice = response;
         }
         StateHasChanged();
+        CheckForUnMatchedButDetectedDevice();
     }
 
     private async Task Eject()
@@ -91,6 +99,30 @@ return "";
         }
     }
 
+    private void CheckForUnMatchedButDetectedDevice()
+    {
+        if (_detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED && _detectedDevice.MatchedState == DetectedDevice.MatchedStateEnum.MATCHED_TYPE)
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.TopCenter;
+
+            Snackbar.Add("New eReader detected...", Severity.Warning, config =>
+            {
+                config.Action = "Configure";
+                config.ActionColor = Color.Primary;
+                config.Onclick = snackbar =>
+    {
+    SendToKnownDeviceEdit();
+    return Task.CompletedTask;
+                };
+            });
+        }
+    }
+
+    public void SendToKnownDeviceEdit()
+    {
+        NavigationManager.NavigateTo("/knowndevices/0?newdevice=true");
+    }
+
     private Color GetMatchStatusColor()
     {
         if (_detectedDevice.MatchedState == DetectedDevice.MatchedStateEnum.MATCHED_KNOWN && _detectedDevice.DeviceState == DetectedDevice.DeviceStateEnum.MOUNTED)
@@ -132,6 +164,7 @@ return "";
         {
             _detectedDevice = detectedDevice;
             InvokeAsync(StateHasChanged);
+            CheckForUnMatchedButDetectedDevice();
         });
 
         try
