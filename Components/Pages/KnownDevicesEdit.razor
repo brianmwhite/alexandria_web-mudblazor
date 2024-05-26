@@ -44,11 +44,8 @@
 
     public bool NewDevice { get; set; }
 
-    MudForm form;
     KnownDeviceModel device = new KnownDeviceModel();
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
-
-    bool success;
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,7 +120,6 @@
 
     private void OnValidSubmit(EditContext context)
     {
-        success = true;
         Save(device);
         StateHasChanged();
     }
