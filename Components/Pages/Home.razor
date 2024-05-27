@@ -5,11 +5,15 @@
 @using System.Net.Http.Json
 @using System.Text.Json
 @using System.Text
+@using alexandria.api.Models
 @using alexandria.web.Models
 @inject HttpClient httpClient
 @inject IConfiguration Configuration
 @rendermode InteractiveServer
 @using MudBlazor
+@inject ISnackbar Snackbar
+@using web_mudblazor.Components.Layout
+
 
 <style>
     div.container {
@@ -30,7 +34,7 @@
         MultiSelection="true"
         @bind-SelectedItems="@selectedBooks">
         <ToolBarContent>
-            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small">Send to Device</MudButton>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small" OnClick="SendToDevice">Send to Device</MudButton>
             <MudSpacer />
             <MudTextField T="string" Value="@searchString" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start" Clearable="true" OnClearButtonClick="@( () => ClearSearch() )" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
         </ToolBarContent>
@@ -68,6 +72,19 @@
     private long? seriesId = 0;
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
     private HashSet<Book> selectedBooks = new HashSet<Book>();
+
+    [CascadingParameter]
+    public MainLayout Layout { get; set; }
+
+    private void SendToDevice()
+    {
+        // Add your code here to send the selected books to the device
+        // turn the selectedBooks hashset into a string with commas
+        var bookIds = string.Join(",", selectedBooks.Select(b => b.Id));
+        DetectedDevice? detectedDevice = Layout.TopAppBarDetectedDevice;
+
+        Snackbar.Add($"Books: {bookIds} || Device: {detectedDevice.KnownDevice.Id} ", Severity.Success);
+    }
 
     private void SetPageSize(TableState state, int pageSize)
     {
