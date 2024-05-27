@@ -29,6 +29,7 @@
                 <MudTextField Label="Save Path Template" @bind-Value="device.SavePathTemplate" For="@(() => device.SavePathTemplate)" />
                 <MudTextField Label="Vendor" @bind-Value="device.Vendor" For="@(() => device.Vendor)" />
                 <MudTextField Label="Serial Number" @bind-Value="device.SerialNumber" For="@(() => device.SerialNumber)" />
+                <MudTextField Label="Formats" @bind-Value="device.Formats" For="@(() => device.Formats)" />
             </MudCardContent>
             <MudCardActions>
                 <MudButton StartIcon="@Icons.Material.Filled.Save" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary">Save</MudButton>
@@ -54,7 +55,7 @@
     public EventCallback DeviceStatusChanged { get; set; }
 
     [CascadingParameter]
-    public MainLayout Layout { get; set; }
+    public MainLayout? Layout { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,7 +85,7 @@
                     //get from session storage
                 @* var result = await ProtectedSessionStore.GetAsync<DetectedDevice>("DetectedDevice"); *@
                 @* DetectedDevice? detectedDevice = result.Success ? result.Value : null; *@
-                DetectedDevice? detectedDevice = Layout.TopAppBarDetectedDevice;
+                DetectedDevice? detectedDevice = Layout?.TopAppBarDetectedDevice;
 
                 if (detectedDevice == null)
                 {
@@ -98,6 +99,7 @@
                     device.SavePathTemplate = detectedDevice?.DeviceType?.SavePathTemplate;
                     device.Vendor = detectedDevice?.DeviceType?.Vendor;
                     device.SerialNumber = detectedDevice?.USBDeviceInfo?.Serial;
+                    device.Formats = detectedDevice?.DeviceType?.Formats;
                 }
             }
         }
@@ -145,6 +147,18 @@
 
     private async void Save(KnownDeviceModel device)
     {
+        //the user should enter formats in a text field 
+        //as a string of comma, space, or semi-colon separated formats
+        //ensure formats has no spaces and is a comma separated list of formats
+        //formats should only contain letters or numbers
+        //and they should be all lower case
+        if (device is null || device.Formats is null) { return; }
+        device.Formats = string.Join(",", device.Formats
+            .Split(new char[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(f => f.Trim().ToLower())
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+        );
+        
         var url = $"{baseURL}/knowndevices";
         if (device.Id is null || device.Id == 0)
         {

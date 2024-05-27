@@ -34,7 +34,19 @@
         MultiSelection="true"
         @bind-SelectedItems="@selectedBooks">
         <ToolBarContent>
-            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small" OnClick="SendToDevice">Send to Device</MudButton>
+            <MudButton 
+                Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small" 
+                OnClick="SendToDevice" Disabled="IsSendButtonDisabled()">
+                @if (_processing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                    <MudText Class="ms-2">Sending</MudText>
+                }
+                else
+                {
+                    <MudText>Send to Device</MudText>
+                }
+            </MudButton>
             <MudSpacer />
             <MudTextField T="string" Value="@searchString" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start" Clearable="true" OnClearButtonClick="@( () => ClearSearch() )" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
         </ToolBarContent>
@@ -66,7 +78,7 @@
 </div>
 @code {
     private MudTable<Book>? table;
-    private Dictionary<(long, string), bool> _processing = new Dictionary<(long, string), bool>();
+    private bool _processing = false;
     private int totalItems;
     private string searchString = "";
     private long? seriesId = 0;
@@ -74,16 +86,49 @@
     private HashSet<Book> selectedBooks = new HashSet<Book>();
 
     [CascadingParameter]
-    public MainLayout Layout { get; set; }
+    public MainLayout? Layout { get; set; }
 
-    private void SendToDevice()
+    private bool IsSendButtonDisabled()
     {
-        // Add your code here to send the selected books to the device
-        // turn the selectedBooks hashset into a string with commas
-        var bookIds = string.Join(",", selectedBooks.Select(b => b.Id));
-        DetectedDevice? detectedDevice = Layout.TopAppBarDetectedDevice;
+        DetectedDevice? detectedDevice = Layout?.TopAppBarDetectedDevice;
+        return _processing == true
+            || detectedDevice?.DeviceState != DetectedDevice.DeviceStateEnum.MOUNTED 
+            || detectedDevice?.MatchedState != DetectedDevice.MatchedStateEnum.MATCHED_KNOWN
+            || selectedBooks.Count == 0;
+            ;
+    }
 
-        Snackbar.Add($"Books: {bookIds} || Device: {detectedDevice.KnownDevice.Id} ", Severity.Success);
+    private async void SendToDevice()
+    {
+        _processing = true;
+        var bookIds = selectedBooks.Select(b => b.Id).ToList();
+        DetectedDevice? detectedDevice = Layout?.TopAppBarDetectedDevice;
+
+        var payload = new
+        {
+            BookIds = bookIds,
+            KnownDeviceId = detectedDevice?.KnownDevice?.Id
+        };
+        HttpResponseMessage response;
+        try 
+        {
+            response = await httpClient.PostAsJsonAsync($"{baseURL}/books/transfer", payload);
+            await Task.Delay(250);
+        } 
+        finally 
+        {
+            _processing = false;
+            StateHasChanged();
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add($"Books: {string.Join(",", bookIds)} || Device: {detectedDevice?.KnownDevice?.Id} ", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Failed to transfer books. Status code: {response.StatusCode}", Severity.Error);
+        }
     }
 
     private void SetPageSize(TableState state, int pageSize)
@@ -136,22 +181,5 @@
         searchString = "";
         seriesId = 0;
         table?.ReloadServerData();
-    }
-
-    private async Task Transfer(long id, string format)
-    {
-        _processing[(id, format)] = true;
-        var content = new StringContent(JsonSerializer.Serialize(new { id, format }), Encoding.UTF8, "application/json");
-        var response = await httpClient.PostAsync($"{baseURL}/transfer", content);
-        if (response.IsSuccessStatusCode)
-        {
-            // Handle success
-        }
-        else
-        {
-            // Handle failure
-        }
-        await Task.Delay(250);
-        _processing.Remove((id, format));
     }
 }
