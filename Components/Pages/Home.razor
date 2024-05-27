@@ -9,6 +9,7 @@
 @inject HttpClient httpClient
 @inject IConfiguration Configuration
 @rendermode InteractiveServer
+@using MudBlazor
 
 <style>
     div.container {
@@ -25,9 +26,11 @@
         @ref="table"
         Height="100%"
         FixedHeader="true"
-        FixedFooter="true">
+        FixedFooter="true"
+        MultiSelection="true"
+        @bind-SelectedItems="@selectedBooks">
         <ToolBarContent>
-            <MudText Typo="Typo.h6">Books</MudText>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small">Send to Device</MudButton>
             <MudSpacer />
             <MudTextField T="string" Value="@searchString" ValueChanged="@(s=>OnSearch(s))" Placeholder="Search" Adornment="Adornment.Start" Clearable="true" OnClearButtonClick="@( () => ClearSearch() )" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
         </ToolBarContent>
@@ -36,9 +39,6 @@
             <MudTh>Authors</MudTh>
             <MudTh>Series</MudTh>
             <MudTh Style="text-align:center">Publication Date</MudTh>
-            <MudTh Style="text-align:center">azw3</MudTh>
-            <MudTh Style="text-align:center">mobi</MudTh>
-            <MudTh Style="text-align:center">epub</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Title">@context.Title</MudTd>
@@ -47,57 +47,6 @@
                 @context.SeriesInfo</MudTd>
             <MudTd DataLabel="PublicationDate" Style="text-align:center">
                 @(context.PublicationDate.HasValue ? context.PublicationDate.Value.ToString("MMM yyyy") : "")
-            </MudTd>
-            <MudTd DataLabel="azw3" Style="text-align:center">
-                @if (context.HasAzw3)
-                {
-                    var format = "azw3";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled" Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
-                        @if (_processing.ContainsKey((context.Id, format)))
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
-                        }
-                        else
-                        {
-                            <MudText>@format</MudText>
-                        }
-                    </MudButton>
-                }
-            </MudTd>
-            <MudTd DataLabel="mobi" Style="text-align:center">
-                @if (context.HasMobi)
-                {
-                    var format = "mobi";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled" Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
-                        @if (_processing.ContainsKey((context.Id, format)))
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
-                        }
-                        else
-                        {
-                            <MudText>@format</MudText>
-                        }
-                    </MudButton>
-                }
-            </MudTd>
-            <MudTd DataLabel="epub" Style="text-align:center">
-                @if (context.HasEpub)
-                {
-                    var format = "epub";
-                    <MudButton Disabled="@(_processing.ContainsKey((context.Id, format)))" Variant="Variant.Filled" Color="Color.Primary" OnClick="@( () => Transfer(context.Id, format) )">
-                        @if (_processing.ContainsKey((context.Id, format)))
-                        {
-                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                            <MudText Class="ms-2">..</MudText>
-                        }
-                        else
-                        {
-                            <MudText>@format</MudText>
-                        }
-                    </MudButton>
-                }
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
@@ -118,6 +67,8 @@
     private string searchString = "";
     private long? seriesId = 0;
     private string baseURL => Configuration?["baseURL"] ?? string.Empty;
+    private HashSet<Book> selectedBooks = new HashSet<Book>();
+
     private void SetPageSize(TableState state, int pageSize)
     {
         table?.SetRowsPerPage(pageSize);

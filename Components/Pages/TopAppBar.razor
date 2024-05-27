@@ -11,8 +11,8 @@
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject ProtectedSessionStorage ProtectedSessionStore
 
-<MudAppBar Color="Color.Primary" Fixed="false">
-    <MudIconButton Href="/" Icon="@Icons.Material.Filled.MenuBook" Color="Color.Inherit" Edge="Edge.Start" />
+<MudAppBar Color="Color.Primary" Fixed="false" Dense="true">
+    <MudButton Href="/" StartIcon="@Icons.Material.Filled.MenuBook" Color="Color.Inherit" Edge="Edge.Start">Alexandria</MudButton>
     <MudSpacer />
     <MudIconButton Icon=@GetDeviceStatusIcon() Color="@GetDeviceStatusColor()" OnClick="(() => Eject())" />
     <MudIconButton Icon="@Icons.Material.Filled.Smartphone" Color="@GetMatchStatusColor()" OnClick="(() => GetDeviceStatus())" />
@@ -24,7 +24,17 @@
 
     private DetectedDevice _detectedDevice = new DetectedDevice();
 
-    private async Task GetDeviceStatus()
+    public DetectedDevice DetectedDevice
+    {
+        get => _detectedDevice;
+        set
+        {
+            _detectedDevice = value;
+            StateHasChanged();
+        }
+    }
+
+    public async Task GetDeviceStatus()
     {
         var options = new JsonSerializerOptions
             {
@@ -37,7 +47,7 @@
         {
             _detectedDevice = response;
         }
-        await ProtectedSessionStore.SetAsync("DetectedDevice", _detectedDevice);
+        @* await ProtectedSessionStore.SetAsync("DetectedDevice", _detectedDevice); *@
         StateHasChanged();
         CheckForUnMatchedButDetectedDevice();
     }
@@ -165,7 +175,7 @@ return "";
         hubConnection.On<DetectedDevice>("USBDeviceEvent", (detectedDevice) =>
         {
             _detectedDevice = detectedDevice;
-            ProtectedSessionStore.SetAsync("DetectedDevice", detectedDevice);
+            @* ProtectedSessionStore.SetAsync("DetectedDevice", detectedDevice); *@
             InvokeAsync(StateHasChanged);
             CheckForUnMatchedButDetectedDevice();
         });

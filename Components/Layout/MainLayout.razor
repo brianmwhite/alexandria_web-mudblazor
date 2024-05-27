@@ -4,12 +4,52 @@
 <MudDialogProvider @rendermode="InteractiveServer" />
 <MudSnackbarProvider @rendermode="InteractiveServer" />
 
+@using MudBlazor
+@using alexandria.web.Components.Pages
+@using alexandria.api.Models
+
 <MudLayout>
+    <TopAppBar @ref="_topAppBarRef" @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <MudMainContent Style="padding-top: 0;">
-        @Body
+        <CascadingValue Value=this>
+            <CascadingValue Value=DeviceStatusChanged>
+                @Body
+            </CascadingValue>
+        </CascadingValue>
     </MudMainContent>
 </MudLayout>
 
 @code {
+    private TopAppBar? _topAppBarRef;
 
+    public async void UpdateTopAppBar()
+    {
+        if (_topAppBarRef != null)
+        {
+            await _topAppBarRef.GetDeviceStatus();
+        }
+    }
+
+    public DetectedDevice TopAppBarDetectedDevice
+    {
+        get
+        {
+            if (_topAppBarRef != null)
+            {
+                return _topAppBarRef.DetectedDevice;
+            }
+            return new DetectedDevice();
+        }
+    }
+
+    EventCallback _deviceStatusChanged = EventCallback.Empty;
+    EventCallback DeviceStatusChanged
+    {
+        get
+        {
+            if (_deviceStatusChanged.Equals(EventCallback.Empty))
+                _deviceStatusChanged = EventCallback.Factory.Create(this, UpdateTopAppBar);
+            return _deviceStatusChanged;
+        }
+    }
 }
